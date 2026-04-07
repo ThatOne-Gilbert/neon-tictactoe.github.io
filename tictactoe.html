@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title> NEON TIC TAC TOE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap');
+ 
+:root {
+  --orange: #ff8c00;
+  --cyan:   #00e5ff;
+  --pink:   #ff2d78;
+  --green:  #39ff14;
+  --red:    #ff2244;
+  --dark:   #050a12;
+}
+ 
+* { margin:0; padding:0; box-sizing:border-box; }
+ 
+body {
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: 'Orbitron', 'Courier New', monospace;
+  background: #050a12;
+  color: #fff;
+  user-select: none;
+}
+ 
+/* ── CITY BACKGROUND ── */
+.city-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 0%, #0a1628 0%, #050a12 70%);
+}
+ 
+.stars {
+  position: absolute;
+  inset: 0;
+}
+ 
+.city-silhouette {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 55%;
+}
+ 
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px);
+}
+ 
+/* ── SHARED SCREEN BASE ── */
+.screen {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+ 
+/* ── NEON TEXT HELPERS ── */
+.nc { color: var(--cyan);   text-shadow: 0 0 10px var(--cyan),   0 0 25px var(--cyan); }
+.no { color: var(--orange); text-shadow: 0 0 10px var(--orange), 0 0 25px var(--orange); }
+.np { color: var(--pink);   text-shadow: 0 0 10px var(--pink),   0 0 25px var(--pink); }
+ 
+/* ── MODE SCREEN ── */
+#mode-screen { gap: 2rem; }
+ 
+.logo {
+  font-size: clamp(1.8rem, 5vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  animation: flicker 4s infinite;
+  text-align: center;
+}
+ 
+.select-label {
+  font-family: 'Rajdhani', 'Arial Narrow', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.4em;
+  color: rgba(255,255,255,0.45);
+}
+ 
+.mode-btns { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+ 
+.mbtn {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.9rem 2.2rem;
+  border-radius: 5px;
+  cursor: pointer;
+  background: transparent;
+  border: 2px solid;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+ 
+.mbtn-o { color: var(--orange); border-color: var(--orange); box-shadow: 0 0 18px rgba(255,140,0,0.35); }
+.mbtn-o:hover { background: rgba(255,140,0,0.12); box-shadow: 0 0 35px rgba(255,140,0,0.65); transform: scale(1.05); }
+ 
+.mbtn-c { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 18px rgba(0,229,255,0.35); }
+.mbtn-c:hover { background: rgba(0,229,255,0.1); box-shadow: 0 0 35px rgba(0,229,255,0.65); transform: scale(1.05); }
+ 
+#diff-row { display: none; flex-direction: column; align-items: center; gap: 0.8rem; }
+.diff-sub { font-family: 'Rajdhani','Arial Narrow',sans-serif; font-size:0.9rem; letter-spacing:0.35em; color:rgba(255,255,255,0.4); }
+.diff-btns { display: flex; gap: 1rem; }
+ 
+.dbtn {
+  font-family: 'Orbitron','Courier New',monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1.8rem;
+  border-radius: 5px;
+  cursor: pointer;
+  background: transparent;
+  border: 2px solid;
+  transition: all 0.2s;
+}
+ 
+.dbtn-g { color: var(--green); border-color: var(--green); box-shadow: 0 0 12px rgba(57,255,20,0.3); }
+.dbtn-g:hover { background: rgba(57,255,20,0.1); box-shadow: 0 0 28px rgba(57,255,20,0.6); transform: scale(1.05); }
+ 
+.dbtn-r { color: var(--red); border-color: var(--red); box-shadow: 0 0 12px rgba(255,34,68,0.3); }
+.dbtn-r:hover { background: rgba(255,34,68,0.1); box-shadow: 0 0 28px rgba(255,34,68,0.6); transform: scale(1.05); }
+ 
+/* ── GAME SCREEN ── */
+#game-screen { gap: 0.8rem; display: none; }
+ 
+.top-status {
+  font-family: 'Rajdhani','Arial Narrow',sans-serif;
+  font-size: clamp(0.95rem, 2.5vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan);
+  text-align: center;
+  min-height: 1.8rem;
+}
+ 
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.4rem, 2vw, 1.8rem);
+  width: 100%;
+  max-width: 860px;
+  justify-content: center;
+}
+ 
+/* Side panels */
+.panel {
+  flex-shrink: 0;
+  width: clamp(55px, 9vw, 110px);
+}
+ 
+.panel-inner {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 0.8rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: clamp(160px, 30vw, 240px);
+  justify-content: center;
+}
+ 
+.p-orange { border-color: var(--orange); box-shadow: 0 0 18px rgba(255,140,0,0.4), inset 0 0 18px rgba(255,140,0,0.04); }
+.p-cyan   { border-color: var(--cyan);   box-shadow: 0 0 18px rgba(0,229,255,0.4), inset 0 0 18px rgba(0,229,255,0.04); }
+ 
+.panel-name {
+  font-family: 'Rajdhani','Arial Narrow',sans-serif;
+  font-size: clamp(0.5rem, 1.1vw, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  text-align: center;
+}
+ 
+.pn-o { color: var(--orange); text-shadow: 0 0 8px var(--orange); }
+.pn-c { color: var(--cyan);   text-shadow: 0 0 8px var(--cyan); }
+ 
+.panel-score {
+  font-family: 'Orbitron','Courier New',monospace;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1;
+}
+ 
+.ps-o { color: var(--orange); text-shadow: 0 0 14px var(--orange), 0 0 28px var(--orange); }
+.ps-c { color: var(--cyan);   text-shadow: 0 0 14px var(--cyan),   0 0 28px var(--cyan); }
+ 
+.panel-history { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+ 
+/* Board */
+.board-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  flex-shrink: 0;
+}
+ 
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 22px rgba(0,229,255,0.7), 0 0 50px rgba(0,229,255,0.25);
+  border-radius: 8px;
+  overflow: hidden;
+  width: clamp(230px, 42vw, 360px);
+  height: clamp(230px, 42vw, 360px);
+}
+ 
+.cell {
+  background: rgba(8, 18, 38, 0.88);
+  border: 1px solid rgba(0,229,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+ 
+.cell:hover:not(.taken) {
+  background: rgba(0,229,255,0.06);
+  border-color: rgba(0,229,255,0.6);
+}
+ 
+.cell.taken { cursor: default; }
+ 
+.cell svg { width: 62%; height: 62%; }
+ 
+.cell.x-mark svg { animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275); filter: drop-shadow(0 0 6px var(--orange)) drop-shadow(0 0 16px var(--orange)); }
+.cell.o-mark svg { animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275); filter: drop-shadow(0 0 6px var(--cyan))   drop-shadow(0 0 16px var(--cyan)); }
+ 
+.cell.win-cell { animation: winFlash 0.55s ease forwards; }
+.cell.win-cell.x-mark svg { filter: drop-shadow(0 0 10px var(--orange)) drop-shadow(0 0 28px var(--orange)) drop-shadow(0 0 50px rgba(255,140,0,0.9)); }
+.cell.win-cell.o-mark svg { filter: drop-shadow(0 0 10px var(--cyan))   drop-shadow(0 0 28px var(--cyan))   drop-shadow(0 0 50px rgba(0,229,255,0.9)); }
+ 
+.bottom-logo {
+  font-size: clamp(1rem, 2.8vw, 1.7rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  animation: flicker 5s infinite;
+}
+ 
+/* Bottom bar */
+.bot-bar { display: flex; gap: 0.8rem; }
+ 
+.nbtn {
+  font-family: 'Orbitron','Courier New',monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  border: 2px solid;
+  transition: all 0.2s;
+}
+ 
+.nbtn-o { color: var(--orange); border-color: var(--orange); box-shadow: 0 0 10px rgba(255,140,0,0.28); }
+.nbtn-o:hover { background: rgba(255,140,0,0.1); box-shadow: 0 0 22px rgba(255,140,0,0.55); }
+ 
+.nbtn-c { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,229,255,0.28); }
+.nbtn-c:hover { background: rgba(0,229,255,0.08); box-shadow: 0 0 22px rgba(0,229,255,0.55); }
+ 
+/* Win overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.78);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+ 
+.overlay.show { display: flex; }
+ 
+.win-box {
+  border: 2px solid var(--cyan);
+  border-radius: 12px;
+  padding: clamp(1.5rem,4vw,3rem) clamp(2rem,6vw,5rem);
+  text-align: center;
+  background: rgba(4,10,24,0.96);
+  box-shadow: 0 0 45px rgba(0,229,255,0.5), 0 0 90px rgba(0,229,255,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  animation: popIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+ 
+.win-title {
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+ 
+.win-sub {
+  font-family: 'Rajdhani','Arial Narrow',sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.45);
+}
+ 
+/* ── ANIMATIONS ── */
+@keyframes popIn {
+  0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0);      opacity: 1; }
+}
+ 
+@keyframes winFlash {
+  0%   { background: rgba(8,18,38,0.88); }
+  40%  { background: rgba(0,229,255,0.14); }
+  100% { background: rgba(0,229,255,0.07); }
+}
+ 
+@keyframes flicker {
+  0%,19%,21%,23%,100% { opacity: 1; }
+  20%,22%             { opacity: 0.65; }
+}
+ 
+@keyframes blink {
+  0%,100% { opacity: 0.25; }
+  50%     { opacity: 1; }
+}
+ 
+.td span { animation: blink 1s infinite; }
+.td span:nth-child(2) { animation-delay: 0.2s; }
+.td span:nth-child(3) { animation-delay: 0.4s; }
+</style>
+</head>
+<body>
+ 
+<!-- Background -->
+<div class="city-bg">
+  <div class="stars" id="stars-canvas"></div>
+  <svg class="city-silhouette" viewBox="0 0 1400 400" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+    <!-- Far buildings -->
+    <rect x="0"    y="280" width="60"  height="120" fill="#060e1c"/>
+    <rect x="55"   y="240" width="40"  height="160" fill="#060e1c"/>
+    <rect x="90"   y="260" width="50"  height="140" fill="#060e1c"/>
+    <rect x="135"  y="200" width="35"  height="200" fill="#060e1c"/>
+    <rect x="165"  y="250" width="55"  height="150" fill="#060e1c"/>
+    <rect x="215"  y="220" width="30"  height="180" fill="#060e1c"/>
+    <rect x="240"  y="190" width="45"  height="210" fill="#060e1c"/>
+    <rect x="280"  y="260" width="40"  height="140" fill="#060e1c"/>
+    <rect x="315"  y="230" width="60"  height="170" fill="#060e1c"/>
+    <rect x="370"  y="200" width="35"  height="200" fill="#060e1c"/>
+    <rect x="400"  y="270" width="50"  height="130" fill="#060e1c"/>
+    <rect x="445"  y="215" width="40"  height="185" fill="#060e1c"/>
+    <rect x="480"  y="180" width="55"  height="220" fill="#060e1c"/>
+    <rect x="530"  y="240" width="35"  height="160" fill="#060e1c"/>
+    <rect x="560"  y="210" width="50"  height="190" fill="#060e1c"/>
+    <rect x="605"  y="250" width="40"  height="150" fill="#060e1c"/>
+    <rect x="640"  y="190" width="60"  height="210" fill="#060e1c"/>
+    <rect x="695"  y="220" width="35"  height="180" fill="#060e1c"/>
+    <rect x="725"  y="260" width="50"  height="140" fill="#060e1c"/>
+    <rect x="770"  y="200" width="45"  height="200" fill="#060e1c"/>
+    <rect x="810"  y="240" width="55"  height="160" fill="#060e1c"/>
+    <rect x="860"  y="180" width="40"  height="220" fill="#060e1c"/>
+    <rect x="895"  y="250" width="60"  height="150" fill="#060e1c"/>
+    <rect x="950"  y="210" width="35"  height="190" fill="#060e1c"/>
+    <rect x="980"  y="230" width="50"  height="170" fill="#060e1c"/>
+    <rect x="1025" y="270" width="40"  height="130" fill="#060e1c"/>
+    <rect x="1060" y="190" width="55"  height="210" fill="#060e1c"/>
+    <rect x="1110" y="240" width="35"  height="160" fill="#060e1c"/>
+    <rect x="1140" y="200" width="60"  height="200" fill="#060e1c"/>
+    <rect x="1195" y="250" width="40"  height="150" fill="#060e1c"/>
+    <rect x="1230" y="210" width="50"  height="190" fill="#060e1c"/>
+    <rect x="1275" y="230" width="45"  height="170" fill="#060e1c"/>
+    <rect x="1315" y="180" width="40"  height="220" fill="#060e1c"/>
+    <rect x="1350" y="260" width="50"  height="140" fill="#060e1c"/>
+    <!-- Neon window dots -->
+    <circle cx="140" cy="215" r="2" fill="#ff8c00" opacity="0.9"/>
+    <circle cx="180" cy="265" r="2" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="255" cy="205" r="2" fill="#ff2d78" opacity="0.9"/>
+    <circle cx="330" cy="245" r="2" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="460" cy="230" r="2" fill="#ff8c00" opacity="0.9"/>
+    <circle cx="495" cy="195" r="2" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="575" cy="225" r="2" fill="#ff2d78" opacity="0.9"/>
+    <circle cx="655" cy="205" r="2" fill="#ff8c00" opacity="0.9"/>
+    <circle cx="780" cy="215" r="2" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="875" cy="195" r="2" fill="#ff8c00" opacity="0.9"/>
+    <circle cx="965" cy="225" r="2" fill="#ff2d78" opacity="0.9"/>
+    <circle cx="1075" cy="205" r="2" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="1155" cy="215" r="2" fill="#ff8c00" opacity="0.9"/>
+    <circle cx="1245" cy="225" r="2" fill="#ff2d78" opacity="0.9"/>
+    <circle cx="1290" cy="245" r="2" fill="#00e5ff" opacity="0.9"/>
+    <!-- Ground -->
+    <rect x="0" y="390" width="1400" height="10" fill="#00e5ff" opacity="0.15"/>
+    <rect x="0" y="395" width="1400" height="5"  fill="#000"/>
+  </svg>
+  <div class="scanlines"></div>
+</div>
+ 
+<!-- MODE SCREEN -->
+<div class="screen" id="mode-screen">
+  <div class="logo">
+    <span class="nc">NEON</span><span class="no"> TIC</span><span class="np"> TAC</span><span class="nc"> TOE</span>
+  </div>
+  <div class="select-label">SELECT MODE</div>
+  <div class="mode-btns">
+    <button class="mbtn mbtn-o" id="btn-2p">👥 2 PLAYERS</button>
+    <button class="mbtn mbtn-c" id="btn-bot">🤖 VS BOT</button>
+  </div>
+  <div id="diff-row">
+    <div class="diff-sub">SELECT DIFFICULTY</div>
+    <div class="diff-btns">
+      <button class="dbtn dbtn-g" id="btn-easy">EASY</button>
+      <button class="dbtn dbtn-r" id="btn-hard">HARD</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- GAME SCREEN -->
+<div class="screen" id="game-screen">
+  <div class="top-status" id="status-bar">YOUR TURN: <span class="no">PLAYER 1 (X)</span></div>
+ 
+  <div class="game-row">
+    <!-- Left panel -->
+    <div class="panel">
+      <div class="panel-inner p-orange">
+        <div class="panel-name pn-o" id="p1-name">PLAYER 1 (X)</div>
+        <div class="panel-score ps-o" id="score-x">0</div>
+        <div class="panel-history" id="hist-x"></div>
+      </div>
+    </div>
+ 
+    <!-- Board -->
+    <div class="board-col">
+      <div class="board" id="board">
+        <div class="cell" data-i="0"></div>
+        <div class="cell" data-i="1"></div>
+        <div class="cell" data-i="2"></div>
+        <div class="cell" data-i="3"></div>
+        <div class="cell" data-i="4"></div>
+        <div class="cell" data-i="5"></div>
+        <div class="cell" data-i="6"></div>
+        <div class="cell" data-i="7"></div>
+        <div class="cell" data-i="8"></div>
+      </div>
+      <div class="bottom-logo">
+        <span class="nc">NEON</span><span class="no"> TIC</span><span class="np"> TAC</span><span class="nc"> TOE</span>
+      </div>
+    </div>
+ 
+    <!-- Right panel -->
+    <div class="panel">
+      <div class="panel-inner p-cyan">
+        <div class="panel-score ps-c" id="score-o">0</div>
+        <div class="panel-history" id="hist-o"></div>
+        <div class="panel-name pn-c" id="p2-name">PLAYER 2 (O)</div>
+      </div>
+    </div>
+  </div>
+ 
+  <div class="bot-bar">
+    <button class="nbtn nbtn-o" id="btn-reset">NEW GAME</button>
+    <button class="nbtn nbtn-c" id="btn-menu">MENU</button>
+  </div>
+</div>
+ 
+<!-- Win overlay -->
+<div class="overlay" id="overlay">
+  <div class="win-box">
+    <div class="win-title" id="win-title">PLAYER 1 WINS!</div>
+    <div class="win-sub"  id="win-sub"></div>
+    <button class="nbtn nbtn-o" id="btn-again">PLAY AGAIN</button>
+  </div>
+</div>
+ 
+<script>
+// ── Draw stars on canvas ──
+(function() {
+  const el = document.getElementById('stars-canvas');
+  const count = 80;
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * 100;
+    const y = Math.random() * 55;
+    const s = Math.random() < 0.15 ? 2 : 1;
+    const c = Math.random() < 0.2 ? (Math.random() < 0.5 ? '#00e5ff' : '#ff8c00') : '#ffffff';
+    const o = 0.4 + Math.random() * 0.6;
+    html += `<div style="position:absolute;left:${x}%;top:${y}%;width:${s}px;height:${s}px;border-radius:50%;background:${c};opacity:${o}"></div>`;
+  }
+  el.innerHTML = html;
+})();
+ 
+// ── SVG marks ──
+const X_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <line x1="15" y1="15" x2="85" y2="85" stroke="#ff8c00" stroke-width="14" stroke-linecap="round"/>
+  <line x1="85" y1="15" x2="15" y2="85" stroke="#ff8c00" stroke-width="14" stroke-linecap="round"/>
+  <line x1="15" y1="15" x2="85" y2="85" stroke="#ffcc77" stroke-width="5"  stroke-linecap="round" opacity="0.65"/>
+  <line x1="85" y1="15" x2="15" y2="85" stroke="#ffcc77" stroke-width="5"  stroke-linecap="round" opacity="0.65"/>
+</svg>`;
+ 
+const O_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="33" fill="none" stroke="#00e5ff" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="50" cy="50" r="33" fill="none" stroke="#aaf7ff" stroke-width="5"  stroke-linecap="round" opacity="0.55"/>
+</svg>`;
+ 
+const XM_SVG = `<svg viewBox="0 0 100 100" width="16" height="16" xmlns="http://www.w3.org/2000/svg" style="display:block;animation:popIn .3s cubic-bezier(.175,.885,.32,1.275)">
+  <line x1="15" y1="15" x2="85" y2="85" stroke="#ff8c00" stroke-width="18" stroke-linecap="round"/>
+  <line x1="85" y1="15" x2="15" y2="85" stroke="#ff8c00" stroke-width="18" stroke-linecap="round"/>
+</svg>`;
+ 
+const OM_SVG = `<svg viewBox="0 0 100 100" width="16" height="16" xmlns="http://www.w3.org/2000/svg" style="display:block;animation:popIn .3s cubic-bezier(.175,.885,.32,1.275)">
+  <circle cx="50" cy="50" r="33" fill="none" stroke="#00e5ff" stroke-width="18"/>
+</svg>`;
+ 
+// ── Game state ──
+const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let board=Array(9).fill(''), current='X', gameOver=false;
+let botMode=false, botDiff='easy', botBusy=false;
+let scores={X:0,O:0};
+ 
+// ── Elements ──
+const modeScreen  = document.getElementById('mode-screen');
+const gameScreen  = document.getElementById('game-screen');
+const diffRow     = document.getElementById('diff-row');
+const statusBar   = document.getElementById('status-bar');
+const scoreX      = document.getElementById('score-x');
+const scoreO      = document.getElementById('score-o');
+const histX       = document.getElementById('hist-x');
+const histO       = document.getElementById('hist-o');
+const p1Name      = document.getElementById('p1-name');
+const p2Name      = document.getElementById('p2-name');
+const overlay     = document.getElementById('overlay');
+const winTitle    = document.getElementById('win-title');
+const winSub      = document.getElementById('win-sub');
+const cells       = document.querySelectorAll('.cell');
+ 
+// ── Mode selection ──
+document.getElementById('btn-2p').onclick = () => {
+  botMode = false;
+  diffRow.style.display = 'none';
+  launch();
+};
+document.getElementById('btn-bot').onclick = () => {
+  botMode = true;
+  diffRow.style.display = 'flex';
+};
+document.getElementById('btn-easy').onclick = () => { botDiff='easy'; launch(); };
+document.getElementById('btn-hard').onclick = () => { botDiff='hard'; launch(); };
+ 
+function launch() {
+  modeScreen.style.display = 'none';
+  gameScreen.style.display = 'flex';
+  p1Name.textContent = botMode ? 'YOU (X)'  : 'PLAYER 1 (X)';
+  p2Name.textContent = botMode ? 'BOT (O)'  : 'PLAYER 2 (O)';
+  scores = {X:0, O:0};
+  updateScores();
+  reset();
+}
+ 
+document.getElementById('btn-menu').onclick = () => {
+  gameScreen.style.display = 'none';
+  modeScreen.style.display = 'flex';
+  diffRow.style.display = 'none';
+};
+ 
+// ── Core ──
+function checkWin(b) {
+  for (const [a,c,d] of WINS)
+    if (b[a] && b[a]===b[c] && b[a]===b[d]) return {w:b[a], combo:[a,c,d]};
+  if (b.every(v=>v)) return {draw:true};
+  return null;
+}
+ 
+function updateScores() {
+  scoreX.textContent = scores.X;
+  scoreO.textContent = scores.O;
+}
+ 
+function setStatus(html) { statusBar.innerHTML = html; }
+ 
+function place(idx, player) {
+  board[idx] = player;
+  const cell = cells[idx];
+  cell.innerHTML = player==='X' ? X_SVG : O_SVG;
+  cell.classList.add('taken', player==='X' ? 'x-mark' : 'o-mark');
+}
+ 
+function finish(result) {
+  gameOver = true;
+  let title, sub, boxColor;
+ 
+  if (result.draw) {
+    title = "IT'S A DRAW!";
+    sub   = 'NO WINNER THIS ROUND';
+    winTitle.style.color = '#ff2d78';
+    winTitle.style.textShadow = '0 0 18px #ff2d78, 0 0 36px #ff2d78';
+  } else {
+    result.combo.forEach(i => cells[i].classList.add('win-cell'));
+    const w = result.w;
+    scores[w]++;
+    updateScores();
+    if (w==='X') { histX.insertAdjacentHTML('beforeend', XM_SVG); }
+    else         { histO.insertAdjacentHTML('beforeend', OM_SVG); }
+ 
+    if (botMode) {
+      if (w==='X') {
+        title='YOU WIN! 🎉'; sub='HUMAN BEATS THE MACHINE';
+        winTitle.style.color='#ff8c00'; winTitle.style.textShadow='0 0 18px #ff8c00,0 0 36px #ff8c00';
+      } else {
+        title='BOT WINS!'; sub='THE MACHINE PREVAILS';
+        winTitle.style.color='#00e5ff'; winTitle.style.textShadow='0 0 18px #00e5ff,0 0 36px #00e5ff';
+      }
+    } else {
+      const n = w==='X'?'PLAYER 1':'PLAYER 2';
+      title = n+' WINS!';
+      sub   = n+' DOMINATES';
+      if (w==='X') { winTitle.style.color='#ff8c00'; winTitle.style.textShadow='0 0 18px #ff8c00,0 0 36px #ff8c00'; }
+      else         { winTitle.style.color='#00e5ff'; winTitle.style.textShadow='0 0 18px #00e5ff,0 0 36px #00e5ff'; }
+    }
+  }
+ 
+  winTitle.textContent = title;
+  winSub.textContent   = sub;
+  setTimeout(() => overlay.classList.add('show'), 650);
+}
+ 
+function updateStatus() {
+  if (botMode && current==='O') {
+    setStatus(`BOT THINKING<span class="td"><span>.</span><span>.</span><span>.</span></span>`);
+  } else {
+    const label = botMode
+      ? (current==='X' ? `YOUR TURN: <span class="no">YOU (X)</span>` : '')
+      : (current==='X'
+        ? `YOUR TURN: <span class="no">PLAYER 1 (X)</span>`
+        : `YOUR TURN: <span class="nc">PLAYER 2 (O)</span>`);
+    setStatus(label);
+  }
+}
+ 
+function handleClick(e) {
+  const idx = +e.currentTarget.dataset.i;
+  if (board[idx] || gameOver || botBusy) return;
+  if (botMode && current==='O') return;
+  place(idx, current);
+  const r = checkWin(board);
+  if (r) { finish(r); return; }
+  current = current==='X'?'O':'X';
+  if (botMode && current==='O') { updateStatus(); doBot(); }
+  else updateStatus();
+}
+ 
+// ── Bot AI ──
+function doBot() {
+  botBusy = true;
+  setTimeout(() => {
+    if (gameOver) { botBusy=false; return; }
+    const idx = botDiff==='easy' ? easyMove() : minimaxMove();
+    place(idx, 'O');
+    botBusy = false;
+    const r = checkWin(board);
+    if (r) { finish(r); return; }
+    current = 'X';
+    updateStatus();
+  }, botDiff==='easy' ? 480 : 680);
+}
+ 
+function easyMove() {
+  if (Math.random() < 0.35) { const s=smartMove(); if (s!==-1) return s; }
+  const empty = board.reduce((a,v,i)=>{ if(!v) a.push(i); return a; },[]);
+  return empty[Math.floor(Math.random()*empty.length)];
+}
+ 
+function smartMove() {
+  for (let i=0;i<9;i++) { if(!board[i]) { board[i]='O'; const r=checkWin(board); board[i]=''; if(r&&r.w==='O') return i; } }
+  for (let i=0;i<9;i++) { if(!board[i]) { board[i]='X'; const r=checkWin(board); board[i]=''; if(r&&r.w==='X') return i; } }
+  return -1;
+}
+ 
+function minimaxMove() {
+  let best=-Infinity, bi=-1;
+  for (let i=0;i<9;i++) {
+    if (!board[i]) { board[i]='O'; const s=mm(board,0,false); board[i]=''; if(s>best){best=s;bi=i;} }
+  }
+  return bi;
+}
+ 
+function mm(b,d,isMax) {
+  const r=checkWin(b);
+  if (r) { if(r.draw) return 0; return r.w==='O'?10-d:d-10; }
+  if (isMax) {
+    let best=-Infinity;
+    for(let i=0;i<9;i++){if(!b[i]){b[i]='O';best=Math.max(best,mm(b,d+1,false));b[i]='';}}
+    return best;
+  } else {
+    let best=Infinity;
+    for(let i=0;i<9;i++){if(!b[i]){b[i]='X';best=Math.min(best,mm(b,d+1,true));b[i]='';}}
+    return best;
+  }
+}
+ 
+// ── Reset ──
+function reset() {
+  board=Array(9).fill(''); current='X'; gameOver=false; botBusy=false;
+  overlay.classList.remove('show');
+  cells.forEach(c=>{ c.innerHTML=''; c.className='cell'; });
+  updateStatus();
+}
+ 
+cells.forEach(c => c.addEventListener('click', handleClick));
+document.getElementById('btn-reset').onclick = reset;
+document.getElementById('btn-again').onclick = reset;
+</script>
+</body>
+</html>
+ 
